@@ -46,10 +46,10 @@ const std::vector<std::string> RequestParser::BATCH_OPERATIONS{"BatchGetItem", "
 std::string RequestParser::parseOperation(const Http::HeaderMap& headerMap) {
   std::string operation;
 
-  const std::string& x_amz_target = headerMap.get(X_AMZ_TARGET);
+  Http::HeaderString x_amz_target = headerMap.get(X_AMZ_TARGET);
   if (!x_amz_target.empty()) {
     // Normally x-amz-target contains Version.Operation, e.g., DynamoDB_20160101.GetItem
-    std::vector<std::string> version_and_operation = StringUtil::split(x_amz_target, '.');
+    std::vector<std::string> version_and_operation = StringUtil::split(x_amz_target.c_str(), '.');
     if (version_and_operation.size() == 2) {
       operation = version_and_operation[1];
     }

@@ -14,36 +14,35 @@ void ConnectionManagerUtility::mutateRequestHeaders(Http::HeaderMap& request_hea
                                                     Runtime::RandomGenerator& random,
                                                     Runtime::Loader& runtime) {
   // Clean proxy headers.
-  request_headers.remove(Headers::get().Connection);
-  request_headers.remove(Headers::get().EnvoyInternalRequest);
-  request_headers.remove(Headers::get().KeepAlive);
-  request_headers.remove(Headers::get().ProxyConnection);
-  request_headers.remove(Headers::get().TransferEncoding);
-  request_headers.remove(Headers::get().Upgrade);
-  request_headers.remove(Headers::get().Version);
+  request_headers.Connection().remove();
+  request_headers.EnvoyInternalRequest().remove();
+  request_headers.KeepAlive().remove();
+  request_headers.ProxyConnection().remove();
+  request_headers.TransferEncoding().remove();
+  request_headers.Upgrade().remove();
+  request_headers.Version().remove();
 
   // If we are "using remote address" this means that we create/append to XFF with our immediate
   // peer. Cases where we don't "use remote address" include trusted double proxy where we expect
   // our peer to have already properly set XFF, etc.
   if (config.useRemoteAddress()) {
-    if (Network::Utility::isLoopbackAddress(connection.remoteAddress())) {
+    if (Network::Utility::isLoopbackAddress(connection.remoteAddress().c_str())) {
       Utility::appendXff(request_headers, config.localAddress());
     } else {
       Utility::appendXff(request_headers, connection.remoteAddress());
     }
-    request_headers.replaceViaMoveValue(Headers::get().ForwardedProto,
-                                        connection.ssl() ? "https" : "http");
+    request_headers.ForwardedProto().value(connection.ssl() ? Headers::get().SchemeValues.Https
+                                                            : Headers::get().SchemeValues.Http);
   }
 
   // If we didn't already replace x-forwarded-proto because we are using the remote address, and
   // remote hasn't set it (trusted proxy), we set it, since we then use this for setting scheme.
-  if (!request_headers.has(Headers::get().ForwardedProto)) {
-    request_headers.addViaMoveValue(Headers::get().ForwardedProto,
-                                    connection.ssl() ? "https" : "http");
+  if (!request_headers.ForwardedProto().present()) {
+    request_headers.ForwardedProto().value(connection.ssl() ? Headers::get().SchemeValues.Https
+                                                            : Headers::get().SchemeValues.Http);
   }
 
-  request_headers.replaceViaCopy(Headers::get().Scheme,
-                                 request_headers.get(Headers::get().ForwardedProto));
+  request_headers.Scheme().value(request_headers.ForwardedProto());
 
   // At this point we can determine whether this is an internal or external request. This is done
   // via XFF, which was set above or we trust.
@@ -55,18 +54,18 @@ void ConnectionManagerUtility::mutateRequestHeaders(Http::HeaderMap& request_hea
 
   // If internal request, set header and do other internal only modifications.
   if (internal_request) {
-    request_headers.addViaMoveValue(Headers::get().EnvoyInternalRequest, "true");
+    request_headers.EnvoyInternalRequest().value(Headers::get().EnvoyInternalRequestValues.True);
   } else {
     if (edge_request) {
-      request_headers.remove(Headers::get().EnvoyDownstreamServiceCluster);
+      request_headers.EnvoyDownstreamServiceCluster().remove();
     }
 
-    request_headers.remove(Headers::get().EnvoyRetryOn);
-    request_headers.remove(Headers::get().EnvoyUpstreamAltStatName);
-    request_headers.remove(Headers::get().EnvoyUpstreamRequestTimeoutMs);
-    request_headers.remove(Headers::get().EnvoyUpstreamRequestPerTryTimeoutMs);
-    request_headers.remove(Headers::get().EnvoyExpectedRequestTimeoutMs);
-    request_headers.remove(Headers::get().EnvoyForceTrace);
+    request_headers.EnvoyRetryOn().remove();
+    request_headers.EnvoyUpstreamAltStatName().remove();
+    request_headers.EnvoyUpstreamRequestTimeoutMs().remove();
+    request_headers.EnvoyUpstreamRequestPerTryTimeoutMs().remove();
+    request_headers.EnvoyExpectedRequestTimeoutMs().remove();
+    request_headers.EnvoyForceTrace().remove();
 
     for (const Http::LowerCaseString& header : config.routeConfig().internalOnlyHeaders()) {
       request_headers.remove(header);
@@ -74,22 +73,20 @@ void ConnectionManagerUtility::mutateRequestHeaders(Http::HeaderMap& request_hea
   }
 
   if (config.userAgent().valid()) {
-    request_headers.replaceViaCopy(Headers::get().EnvoyDownstreamServiceCluster,
-                                   config.userAgent().value());
-    if (request_headers.get(Headers::get().UserAgent).empty()) {
-      request_headers.replaceViaCopy(Headers::get().UserAgent, config.userAgent().value());
+    request_headers.EnvoyDownstreamServiceCluster().value(config.userAgent().value());
+    if (!request_headers.UserAgent().present()) {
+      request_headers.UserAgent().value(config.userAgent().value());
     }
   }
 
   // If we are an external request, AND we are "using remote address" (see above), we set
   // x-envoy-external-address since this is our first ingress point into the trusted network.
   if (edge_request) {
-    request_headers.replaceViaCopy(Headers::get().EnvoyExternalAddress, connection.remoteAddress());
+    request_headers.EnvoyExternalAddress().value(connection.remoteAddress());
   }
 
   // Generate x-request-id for all edge requests, or if there is none.
-  if (config.generateRequestId() &&
-      (edge_request || request_headers.get(Headers::get().RequestId).empty())) {
+  if (config.generateRequestId() && (edge_request || !request_headers.RequestId().present())) {
     std::string uuid = "";
 
     try {
@@ -100,7 +97,7 @@ void ConnectionManagerUtility::mutateRequestHeaders(Http::HeaderMap& request_hea
     }
 
     if (!uuid.empty()) {
-      request_headers.replaceViaMoveValue(Headers::get().RequestId, std::move(uuid));
+      request_headers.RequestId().value(uuid);
     }
   }
 
@@ -112,9 +109,9 @@ void ConnectionManagerUtility::mutateRequestHeaders(Http::HeaderMap& request_hea
 void ConnectionManagerUtility::mutateResponseHeaders(Http::HeaderMap& response_headers,
                                                      const Http::HeaderMap& request_headers,
                                                      ConnectionManagerConfig& config) {
-  response_headers.remove(Headers::get().Connection);
-  response_headers.remove(Headers::get().TransferEncoding);
-  response_headers.remove(Headers::get().Version);
+  response_headers.Connection().remove();
+  response_headers.TransferEncoding().remove();
+  response_headers.Version().remove();
 
   for (const Http::LowerCaseString& to_remove : config.routeConfig().responseHeadersToRemove()) {
     response_headers.remove(to_remove);
@@ -122,12 +119,11 @@ void ConnectionManagerUtility::mutateResponseHeaders(Http::HeaderMap& response_h
 
   for (const std::pair<Http::LowerCaseString, std::string>& to_add :
        config.routeConfig().responseHeadersToAdd()) {
-    response_headers.addViaCopy(to_add.first, to_add.second);
+    response_headers.addLowerCase(to_add.first.get(), to_add.second);
   }
 
-  if (request_headers.has(Headers::get().EnvoyForceTrace)) {
-    response_headers.replaceViaCopy(Headers::get().RequestId,
-                                    request_headers.get(Headers::get().RequestId));
+  if (request_headers.EnvoyForceTrace().present()) {
+    response_headers.RequestId().value(request_headers.RequestId());
   }
 }
 

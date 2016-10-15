@@ -21,13 +21,17 @@ public:
   void* linearize(uint32_t size) override;
   void move(Instance& rhs) override;
   void move(Instance& rhs, uint64_t length) override;
+  uint64_t reserve(uint64_t length, RawSlice* iovecs, uint64_t num_iovecs) override;
+  void commit(RawSlice* iovecs, uint64_t num_iovecs) override;
   ssize_t search(const void* data, uint64_t size, size_t start) const override;
 
+protected:
+  ImplBase(evbuffer* buffer) : buffer_(buffer) {}
+
+  evbuffer* buffer_;
+
 private:
-  /**
-   * @return evbuffer& the backing evbuffer.
-   */
-  virtual evbuffer& buffer() const PURE;
+  void add(const char* data); // fixfix
 };
 
 /**
@@ -35,13 +39,7 @@ private:
  */
 class WrappedImpl : public ImplBase {
 public:
-  WrappedImpl(evbuffer* buffer) : buffer_(buffer) {}
-
-private:
-  // ImplBase
-  evbuffer& buffer() const override { return *buffer_; }
-
-  evbuffer* buffer_;
+  WrappedImpl(evbuffer* buffer) : ImplBase(buffer) {}
 };
 
 /**
@@ -53,12 +51,7 @@ public:
   OwnedImpl(const std::string& data);
   OwnedImpl(const Instance& data);
   OwnedImpl(const void* data, uint64_t size);
-
-private:
-  // ImplBase
-  evbuffer& buffer() const override { return *buffer_; }
-
-  Event::Libevent::BufferPtr buffer_;
+  ~OwnedImpl();
 };
 
 } // Buffer

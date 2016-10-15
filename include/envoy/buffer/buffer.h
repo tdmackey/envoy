@@ -78,6 +78,12 @@ public:
   virtual void move(Instance& rhs, uint64_t length) PURE;
 
   /**
+   * fixfix
+   */
+  virtual uint64_t reserve(uint64_t length, RawSlice* iovecs, uint64_t num_iovecs) PURE;
+  virtual void commit(RawSlice* iovecs, uint64_t num_iovecs) PURE;
+
+  /**
    * Search for an occurence of a buffer within the larger buffer.
    * @param data supplies the data to search for.
    * @param size supplies the length of the data to search for.

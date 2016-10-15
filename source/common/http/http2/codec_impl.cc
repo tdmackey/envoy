@@ -13,23 +13,24 @@
 namespace Http {
 namespace Http2 {
 
-void Utility::reconstituteCrumbledCookies(HeaderMap& headers) {
-  std::string final_cookies;
+void Utility::reconstituteCrumbledCookies(HeaderMap&) {
+  // FIXFIX
+  /*std::string final_cookies;
   bool replace_cookies = false;
-  headers.iterate([&](const LowerCaseString& key, const std::string& value) -> void {
-    if (key == Headers::get().Cookie) {
+  headers.iterate([&](const HeaderEntry& header) -> void {
+    if (header.key().c_str() == Headers::get().Cookie.get()) {
       if (final_cookies.empty()) {
-        final_cookies = value;
+        final_cookies = header.value().c_str();
       } else {
-        final_cookies += "; " + value;
+        final_cookies += "; " + std::string(header.value().c_str());
         replace_cookies = true;
       }
     }
   });
 
   if (replace_cookies) {
-    headers.replaceViaMoveValue(Headers::get().Cookie, std::move(final_cookies));
-  }
+    headers.Cookie().value(final_cookies);
+  }*/
 }
 
 ConnectionImpl::Http2Callbacks ConnectionImpl::http2_callbacks_;
@@ -47,26 +48,25 @@ ConnectionImpl::StreamImpl::StreamImpl(ConnectionImpl& parent)
 
 ConnectionImpl::StreamImpl::~StreamImpl() {}
 
-void ConnectionImpl::StreamImpl::buildHeaders(std::vector<nghttp2_nv>& final_headers,
-                                              const HeaderMap& headers) {
+void ConnectionImpl::StreamImpl::buildHeaders(std::vector<nghttp2_nv>&, const HeaderMap&) {
   // nghttp2 requires that all ':' headers come before all other headers. To avoid making higher
   // layers understand that we do two passes here to build the final header list to encode.
-  final_headers.reserve(headers.size());
-  headers.iterate([&](const LowerCaseString& key, const std::string& value) -> void {
-    if (key.get()[0] == ':') {
-      final_headers.push_back({remove_const<uint8_t>(key.get().c_str()),
-                               remove_const<uint8_t>(value.c_str()), key.get().size(), value.size(),
-                               0});
+  // FIXFIXfinal_headers.reserve(headers.size());
+  /*headers.iterate([&](const HeaderEntry& header) -> void {
+    if (header.key().c_str()[0] == ':') {
+      final_headers.push_back({remove_const<uint8_t>(header.key().c_str()),
+                               remove_const<uint8_t>(header.value().c_str()), header.key().size(),
+                               header.value().size(), 0});
     }
   });
 
-  headers.iterate([&](const LowerCaseString& key, const std::string& value) -> void {
-    if (key.get()[0] != ':') {
-      final_headers.push_back({remove_const<uint8_t>(key.get().c_str()),
-                               remove_const<uint8_t>(value.c_str()), key.get().size(), value.size(),
-                               0});
+  headers.iterate([&](const HeaderEntry& header) -> void {
+    if (header.key().c_str()[0] != ':') {
+      final_headers.push_back({remove_const<uint8_t>(header.key().c_str()),
+                               remove_const<uint8_t>(header.value().c_str()), header.key().size(),
+                               header.value().size(), 0});
     }
-  });
+  });*/
 }
 
 void ConnectionImpl::StreamImpl::encodeHeaders(const HeaderMap& headers, bool end_stream) {
@@ -287,7 +287,7 @@ int ConnectionImpl::onFrameReceived(const nghttp2_frame* frame) {
     stream->remote_end_stream_ = frame->hd.flags & NGHTTP2_FLAG_END_STREAM;
     Utility::reconstituteCrumbledCookies(*stream->headers_);
     if (frame->headers.cat == NGHTTP2_HCAT_REQUEST || frame->headers.cat == NGHTTP2_HCAT_RESPONSE) {
-      stream->headers_->addViaCopy(Headers::get().Version, PROTOCOL_STRING);
+      stream->headers_->Version().value(PROTOCOL_STRING);
       stream->decoder_->decodeHeaders(std::move(stream->headers_), stream->remote_end_stream_);
     } else {
       ASSERT(frame->headers.cat == NGHTTP2_HCAT_HEADERS);
@@ -394,8 +394,7 @@ int ConnectionImpl::onStreamClose(int32_t stream_id, uint32_t error_code) {
   return 0;
 }
 
-int ConnectionImpl::saveHeader(const nghttp2_frame* frame, std::string&& name,
-                               std::string&& value) {
+int ConnectionImpl::saveHeader(const nghttp2_frame* frame, std::string&&, std::string&&) {
   StreamImpl* stream = getStream(frame->hd.stream_id);
   if (!stream) {
     // We have seen 1 or 2 crashes where we get a headers callback but there is no associated
@@ -408,14 +407,16 @@ int ConnectionImpl::saveHeader(const nghttp2_frame* frame, std::string&& name,
     return 0;
   }
 
-  stream->headers_->addViaMove(LowerCaseString(std::move(name), false), std::move(value));
-  if (stream->headers_->byteSize() > StreamImpl::MAX_HEADER_SIZE) {
+  // FIXFIXstream->headers_->addViaMove(LowerCaseString(std::move(name), false), std::move(value));
+  /*if (stream->headers_->byteSize() > StreamImpl::MAX_HEADER_SIZE) {
     // This will cause the library to reset/close the stream.
     stats_.header_overflow_.inc();
     return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
   } else {
     return 0;
-  }
+  }FIXFIX*/
+
+  return 0;
 }
 
 void ConnectionImpl::sendPendingFrames() {

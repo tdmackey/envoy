@@ -8,6 +8,10 @@
 
 namespace Upstream {
 
+static const std::string RUNTIME_HEALTHY_PANIC = "upstream.healthy_panic_threshold";
+static const std::string RUNTIME_ZONE_ROUTING = "upstream.zone_routing.enabled";
+static const std::string RUNTIME_ZONE_MIN_CLUSTER_SIZE = "upstream.zone_routing.min_cluster_size";
+
 const std::vector<HostPtr>& LoadBalancerBase::hostsToUse() {
   ASSERT(host_set_.healthyHosts().size() <= host_set_.hosts().size());
   if (host_set_.hosts().empty()) {
@@ -15,7 +19,7 @@ const std::vector<HostPtr>& LoadBalancerBase::hostsToUse() {
   }
 
   uint64_t global_panic_threshold =
-      std::min(100UL, runtime_.snapshot().getInteger("upstream.healthy_panic_threshold", 50));
+      std::min(100UL, runtime_.snapshot().getInteger(RUNTIME_HEALTHY_PANIC, 50));
   double healthy_percent = 100.0 * host_set_.healthyHosts().size() / host_set_.hosts().size();
 
   // If the % of healthy hosts in the cluster is less than our panic threshold, we use all hosts.
@@ -27,13 +31,12 @@ const std::vector<HostPtr>& LoadBalancerBase::hostsToUse() {
   uint32_t number_of_zones = stats_.upstream_zone_count_.value();
   // Early exit if we cannot perform zone aware routing.
   if (number_of_zones < 2 || host_set_.localZoneHealthyHosts().empty() ||
-      !runtime_.snapshot().featureEnabled("upstream.zone_routing.enabled", 100)) {
+      !runtime_.snapshot().featureEnabled(RUNTIME_ZONE_ROUTING, 100)) {
     return host_set_.healthyHosts();
   }
 
   // Do not perform zone routing for small clusters.
-  uint64_t min_cluster_size =
-      runtime_.snapshot().getInteger("upstream.zone_routing.min_cluster_size", 6U);
+  uint64_t min_cluster_size = runtime_.snapshot().getInteger(RUNTIME_ZONE_MIN_CLUSTER_SIZE, 6U);
 
   if (host_set_.healthyHosts().size() < min_cluster_size) {
     stats_.zone_cluster_too_small_.inc();

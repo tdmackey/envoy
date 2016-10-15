@@ -177,9 +177,13 @@ public:
   uint64_t httpCodecOptions() const override { return http_codec_options_; }
   Ssl::ClientContext* sslContext() const override { return ssl_ctx_; }
   LoadBalancerType lbType() const override { return lb_type_; }
+  const std::string& maintenanceModeRuntimeKey() const override {
+    return maintenance_mode_runtime_key_;
+  }
   uint64_t maxRequestsPerConnection() const override { return max_requests_per_connection_; }
   const std::string& name() const override { return name_; }
   ResourceManager& resourceManager(ResourcePriority priority) const override;
+  const std::string& statPrefix() const override { return stat_prefix_; }
   ClusterStats& stats() const override { return stats_; }
 
 protected:
@@ -193,15 +197,17 @@ protected:
   static const ConstHostVectorPtr empty_host_list_;
 
   Ssl::ClientContext* ssl_ctx_;
-  std::string name_;
+  const std::string name_;
   LoadBalancerType lb_type_;
-  uint64_t max_requests_per_connection_;
-  std::chrono::milliseconds connect_timeout_;
+  const uint64_t max_requests_per_connection_;
+  const std::chrono::milliseconds connect_timeout_;
   mutable ClusterStats stats_;
   HealthCheckerPtr health_checker_;
-  std::string alt_stat_name_;
-  uint64_t features_;
+  const std::string alt_stat_name_;
+  const uint64_t features_;
   OutlierDetectorPtr outlier_detector_;
+  const std::string maintenance_mode_runtime_key_;
+  const std::string stat_prefix_;
 
 private:
   struct ResourceManagers {
