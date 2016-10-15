@@ -15,10 +15,10 @@ namespace Router {
  */
 class RetryStateImpl : public RetryState {
 public:
-  RetryStateImpl(const RetryPolicy& route_policy, Http::HeaderMap& request_headers,
-                 const Upstream::Cluster& cluster, Runtime::Loader& runtime,
-                 Runtime::RandomGenerator& random, Event::Dispatcher& dispatcher,
-                 Upstream::ResourcePriority priority);
+  static RetryStatePtr create(const RetryPolicy& route_policy, Http::HeaderMap& request_headers,
+                              const Upstream::Cluster& cluster, Runtime::Loader& runtime,
+                              Runtime::RandomGenerator& random, Event::Dispatcher& dispatcher,
+                              Upstream::ResourcePriority priority);
   ~RetryStateImpl();
 
   static uint32_t parseRetryOn(const std::string& config);
@@ -30,6 +30,11 @@ public:
                    DoRetryCallback callback) override;
 
 private:
+  RetryStateImpl(const RetryPolicy& route_policy, Http::HeaderMap& request_headers,
+                 const Upstream::Cluster& cluster, Runtime::Loader& runtime,
+                 Runtime::RandomGenerator& random, Event::Dispatcher& dispatcher,
+                 Upstream::ResourcePriority priority);
+
   void enableBackoffTimer();
   void resetRetry();
   bool wouldRetry(const Http::HeaderMap* response_headers,

@@ -61,7 +61,14 @@ public:
    * @param rhs supplies string 2.
    * @return < 0, 0, > 0 depending on the comparison result.
    */
-  static int caseInsensitiveCompare(const std::string& lhs, const std::string& rhs);
+  static int caseInsensitiveCompare(const char* lhs, const char* rhs) {
+    return strcasecmp(lhs, rhs);
+  }
+
+  /**
+   * FIXFIX
+   */
+  static uint32_t itoa(char* out, size_t out_len, uint64_t i);
 
   /**
    * Trim trailing whitespace from a string in place.

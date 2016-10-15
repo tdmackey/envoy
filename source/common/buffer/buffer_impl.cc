@@ -67,6 +67,28 @@ int OwnedImpl::read(int fd, uint64_t max_length) {
   return evbuffer_read(buffer_.get(), fd, max_length);
 }
 
+uint64_t OwnedImpl::reserve(uint64_t length, RawSlice* iovecs, uint64_t num_iovecs) {
+  evbuffer_iovec local_iovecs[num_iovecs];
+  uint64_t ret = evbuffer_reserve_space(buffer_.get(), length, local_iovecs, num_iovecs);
+  ASSERT(ret >= 1);
+  for (uint64_t i = 0; i < ret; i++) {
+    iovecs[i].len_ = local_iovecs[i].iov_len;
+    iovecs[i].mem_ = local_iovecs[i].iov_base;
+  }
+  return ret;
+}
+
+void OwnedImpl::commit(RawSlice* iovecs, uint64_t num_iovecs) {
+  evbuffer_iovec local_iovecs[num_iovecs];
+  for (uint64_t i = 0; i < num_iovecs; i++) {
+    local_iovecs[i].iov_len = iovecs[i].len_;
+    local_iovecs[i].iov_base = iovecs[i].mem_;
+  }
+  int rc = evbuffer_commit_space(buffer_.get(), local_iovecs, num_iovecs);
+  ASSERT(rc == 0);
+  UNREFERENCED_PARAMETER(rc);
+}
+
 ssize_t OwnedImpl::search(const void* data, uint64_t size, size_t start) const {
   evbuffer_ptr start_ptr;
   if (-1 == evbuffer_ptr_set(buffer_.get(), &start_ptr, start, EVBUFFER_PTR_SET)) {

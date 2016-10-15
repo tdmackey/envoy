@@ -298,7 +298,7 @@ void ConnectionImpl::onReadReady() {
       }
       ASSERT(false);
     }
-  } while (rc == 4096);
+  } while (true);
 
   onRead();
 

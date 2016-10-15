@@ -81,6 +81,8 @@ public:
    * fixfix
    */
   virtual int read(int fd, uint64_t max_length) PURE;
+  virtual uint64_t reserve(uint64_t length, RawSlice* iovecs, uint64_t num_iovecs) PURE;
+  virtual void commit(RawSlice* iovecs, uint64_t num_iovecs) PURE;
 
   /**
    * Search for an occurence of a buffer within the larger buffer.

@@ -273,8 +273,9 @@ bool HttpHealthCheckerImpl::HttpActiveHealthCheckSession::isHealthCheckSucceeded
   if (parent_.service_name_.valid() &&
       parent_.runtime_.snapshot().featureEnabled("health_check.verify_cluster", 100UL)) {
     parent_.stats_.verify_cluster_.inc();
-    const std::string& service_cluster_healthchecked =
-        response_headers_->get(Http::Headers::get().EnvoyUpstreamHealthCheckedCluster);
+    // fixfix conversion
+    std::string service_cluster_healthchecked =
+        response_headers_->EnvoyUpstreamHealthCheckedCluster().value().c_str();
 
     return service_cluster_healthchecked.find(parent_.service_name_.value()) == 0;
   }
@@ -291,8 +292,8 @@ void HttpHealthCheckerImpl::HttpActiveHealthCheckSession::onResponseComplete() {
   }
 
   if (0 ==
-      StringUtil::caseInsensitiveCompare(response_headers_->get(Http::Headers::get().Connection),
-                                         Http::Headers::get().ConnectionValues.Close)) {
+      StringUtil::caseInsensitiveCompare(response_headers_->Connection().value().c_str(),
+                                         Http::Headers::get().ConnectionValues.Close.c_str())) {
     client_->close();
   }
 

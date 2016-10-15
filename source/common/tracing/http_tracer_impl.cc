@@ -14,7 +14,11 @@
 namespace Tracing {
 
 void HttpTracerUtility::mutateHeaders(Http::HeaderMap& request_headers, Runtime::Loader& runtime) {
-  std::string x_request_id = request_headers.get(Http::Headers::get().RequestId);
+  if (!request_headers.RequestId().present()) {
+    return;
+  }
+
+  std::string x_request_id = request_headers.RequestId().value().c_str(); // fixfix perf
 
   uint16_t result;
   // Skip if x-request-id is corrupted.
@@ -38,7 +42,7 @@ void HttpTracerUtility::mutateHeaders(Http::HeaderMap& request_headers, Runtime:
     UuidUtils::setTraceableUuid(x_request_id, UuidTraceStatus::NoTrace);
   }
 
-  request_headers.replaceViaCopy(Http::Headers::get().RequestId, x_request_id);
+  request_headers.RequestId().value(x_request_id);
 }
 
 Decision HttpTracerUtility::isTracing(const Http::AccessLog::RequestInfo& request_info,
@@ -49,7 +53,7 @@ Decision HttpTracerUtility::isTracing(const Http::AccessLog::RequestInfo& reques
   }
 
   UuidTraceStatus trace_status =
-      UuidUtils::isTraceableUuid(request_headers.get(Http::Headers::get().RequestId));
+      UuidUtils::isTraceableUuid(request_headers.RequestId().value().c_str());
 
   switch (trace_status) {
   case UuidTraceStatus::Client:
@@ -208,9 +212,9 @@ LightStepSink::LightStepSink(const Json::Object& config, Upstream::ClusterManage
   });
 }
 
-std::string LightStepSink::buildRequestLine(const Http::HeaderMap& request_headers,
-                                            const Http::AccessLog::RequestInfo& info) {
-  std::string method = request_headers.get(Http::Headers::get().Method);
+std::string LightStepSink::buildRequestLine(const Http::HeaderMap&,
+                                            const Http::AccessLog::RequestInfo&) {
+  /*std::string method = request_headers.get(Http::Headers::get().Method);
   std::string path = request_headers.has(Http::Headers::get().EnvoyOriginalPath)
                          ? request_headers.get(Http::Headers::get().EnvoyOriginalPath)
                          : request_headers.get(Http::Headers::get().Path);
@@ -220,17 +224,17 @@ std::string LightStepSink::buildRequestLine(const Http::HeaderMap& request_heade
     path = path.substr(0, max_path_length);
   }
 
-  return fmt::format("{} {} {}", method, path, info.protocol());
+  return fmt::format("{} {} {}", method, path, info.protocol());fixfix*/
+  return "";
 }
 
 std::string LightStepSink::buildResponseCode(const Http::AccessLog::RequestInfo& info) {
   return info.responseCode().valid() ? std::to_string(info.responseCode().value()) : "0";
 }
 
-void LightStepSink::flushTrace(const Http::HeaderMap& request_headers, const Http::HeaderMap&,
-                               const Http::AccessLog::RequestInfo& request_info,
-                               const TracingContext& tracing_context) {
-  lightstep::Span span = tls_.getTyped<TlsLightStepTracer>(tls_slot_).tracer_.StartSpan(
+void LightStepSink::flushTrace(const Http::HeaderMap&, const Http::HeaderMap&,
+                               const Http::AccessLog::RequestInfo&, const TracingContext&) {
+  /*lightstep::Span span = tls_.getTyped<TlsLightStepTracer>(tls_slot_).tracer_.StartSpan(
       tracing_context.operationName(),
       {lightstep::StartTimestamp(request_info.startTime()),
        lightstep::SetTag("join:x-request-id", request_headers.get(Http::Headers::get().RequestId)),
@@ -261,7 +265,7 @@ void LightStepSink::flushTrace(const Http::HeaderMap& request_headers, const Htt
     span.SetTag("join:x-client-trace-id", request_headers.get(Http::Headers::get().ClientTraceId));
   }
 
-  span.Finish();
+  span.Finish();fixfix*/
 }
 
 void LightStepRecorder::onFailure(Http::AsyncClient::FailureReason) {

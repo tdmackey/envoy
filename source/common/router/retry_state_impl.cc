@@ -14,29 +14,46 @@ const uint32_t RetryPolicy::RETRY_ON_5XX;
 const uint32_t RetryPolicy::RETRY_ON_CONNECT_FAILURE;
 const uint32_t RetryPolicy::RETRY_ON_RETRIABLE_4XX;
 
+RetryStatePtr RetryStateImpl::create(const RetryPolicy& route_policy,
+                                     Http::HeaderMap& request_headers,
+                                     const Upstream::Cluster& cluster, Runtime::Loader& runtime,
+                                     Runtime::RandomGenerator& random,
+                                     Event::Dispatcher& dispatcher,
+                                     Upstream::ResourcePriority priority) {
+  RetryStatePtr ret;
+  if (request_headers.EnvoyRetryOn().present() || route_policy.retryOn()) {
+    ret.reset(new RetryStateImpl(route_policy, request_headers, cluster, runtime, random,
+                                 dispatcher, priority));
+  }
+
+  request_headers.EnvoyRetryOn().remove();
+  request_headers.EnvoyMaxRetries().remove();
+  return ret;
+}
+
 RetryStateImpl::RetryStateImpl(const RetryPolicy& route_policy, Http::HeaderMap& request_headers,
                                const Upstream::Cluster& cluster, Runtime::Loader& runtime,
                                Runtime::RandomGenerator& random, Event::Dispatcher& dispatcher,
                                Upstream::ResourcePriority priority)
     : cluster_(cluster), runtime_(runtime), random_(random), dispatcher_(dispatcher),
       priority_(priority) {
-  retry_on_ = parseRetryOn(request_headers.get(Http::Headers::get().EnvoyRetryOn));
-  if (retry_on_ != 0) {
-    const std::string& max_retries = request_headers.get(Http::Headers::get().EnvoyMaxRetries);
-    uint64_t temp;
-    if (!StringUtil::atoul(max_retries.c_str(), temp)) {
-      retries_remaining_ = 1;
-    } else {
-      retries_remaining_ = temp;
+
+  if (request_headers.EnvoyRetryOn().present()) {
+    retry_on_ = parseRetryOn(request_headers.EnvoyRetryOn().value().c_str());
+    if (retry_on_ != 0 && request_headers.EnvoyMaxRetries().present()) {
+      const char* max_retries = request_headers.EnvoyMaxRetries().value().c_str();
+      uint64_t temp;
+      if (!StringUtil::atoul(max_retries, temp)) {
+        retries_remaining_ = 1;
+      } else {
+        retries_remaining_ = temp;
+      }
     }
   }
 
   // Merge in the route policy.
   retry_on_ |= route_policy.retryOn();
   retries_remaining_ = std::max(retries_remaining_, route_policy.numRetries());
-
-  request_headers.remove(Http::Headers::get().EnvoyRetryOn);
-  request_headers.remove(Http::Headers::get().EnvoyMaxRetries);
 }
 
 RetryStateImpl::~RetryStateImpl() { resetRetry(); }

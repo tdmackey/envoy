@@ -10,8 +10,6 @@
 namespace Grpc {
 
 const std::string Common::GRPC_CONTENT_TYPE{"application/grpc"};
-const Http::LowerCaseString Common::GRPC_MESSAGE_HEADER{"grpc-message"};
-const Http::LowerCaseString Common::GRPC_STATUS_HEADER{"grpc-status"};
 
 void Common::chargeStat(Stats::Store& store, const std::string& cluster,
                         const std::string& grpc_service, const std::string& grpc_method,
@@ -38,30 +36,30 @@ Http::MessagePtr Common::prepareHeaders(const std::string& upstream_cluster,
                                         const std::string& service_full_name,
                                         const std::string& method_name) {
   Http::MessagePtr message(new Http::RequestMessageImpl());
-  message->headers().addViaMoveValue(Http::Headers::get().Scheme, "http");
-  message->headers().addViaMoveValue(Http::Headers::get().Method, "POST");
-  message->headers().addViaMoveValue(Http::Headers::get().Path,
-                                     fmt::format("/{}/{}", service_full_name, method_name));
-  message->headers().addViaCopy(Http::Headers::get().Host, upstream_cluster);
-  message->headers().addViaCopy(Http::Headers::get().ContentType, Common::GRPC_CONTENT_TYPE);
+  message->headers().Scheme().value(Http::Headers::get().SchemeValues.Http);
+  message->headers().Method().value(Http::Headers::get().MethodValues.Post);
+  message->headers().Path().value(fmt::format("/{}/{}", service_full_name, method_name));
+  message->headers().Host().value(upstream_cluster);
+  message->headers().ContentType().value(Common::GRPC_CONTENT_TYPE);
 
   return message;
 }
 
 void Common::checkForHeaderOnlyError(Http::Message& http_response) {
   // First check for grpc-status in headers. If it is here, we have an error.
-  const std::string& grpc_status_header = http_response.headers().get(Common::GRPC_STATUS_HEADER);
-  if (grpc_status_header.empty()) {
+  const Http::HeaderEntry& grpc_status_header = http_response.headers().GrpcStatus();
+  if (!grpc_status_header.present()) {
     return;
   }
 
   uint64_t grpc_status_code;
-  if (!StringUtil::atoul(grpc_status_header.c_str(), grpc_status_code)) {
+  if (!StringUtil::atoul(grpc_status_header.value().c_str(), grpc_status_code)) {
     throw Exception(Optional<uint64_t>(), "bad grpc-status header");
   }
 
-  const std::string& grpc_status_message = http_response.headers().get(Common::GRPC_MESSAGE_HEADER);
-  throw Exception(grpc_status_code, grpc_status_message);
+  // fixfix
+  Http::HeaderString grpc_status_message = http_response.headers().GrpcMessage().value();
+  throw Exception(grpc_status_code, grpc_status_message.c_str());
 }
 
 void Common::validateResponse(Http::Message& http_response) {
@@ -76,16 +74,16 @@ void Common::validateResponse(Http::Message& http_response) {
     throw Exception(Optional<uint64_t>(), "no response trailers");
   }
 
-  const std::string& grpc_status_header = http_response.trailers()->get(Common::GRPC_STATUS_HEADER);
-  const std::string& grpc_status_message =
-      http_response.trailers()->get(Common::GRPC_MESSAGE_HEADER);
+  // fixfix
+  Http::HeaderString grpc_status_header = http_response.trailers()->GrpcStatus().value();
+  Http::HeaderString grpc_status_message = http_response.trailers()->GrpcMessage().value();
   uint64_t grpc_status_code;
   if (!StringUtil::atoul(grpc_status_header.c_str(), grpc_status_code)) {
     throw Exception(Optional<uint64_t>(), "bad grpc-status trailer");
   }
 
   if (grpc_status_code != 0) {
-    throw Exception(grpc_status_code, grpc_status_message);
+    throw Exception(grpc_status_code, grpc_status_message.c_str());
   }
 }
 

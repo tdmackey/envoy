@@ -250,6 +250,11 @@ public:
   virtual LoadBalancerType lbType() const PURE;
 
   /**
+   * FIXFIX
+   */
+  virtual const std::string& maintenanceModeRuntimeKey() const PURE;
+
+  /**
    * @return uint64_t the maximum number of outbound requests that a connection pool will make on
    *         each upstream connection. This can be used to increase spread if the backends cannot
    *         tolerate imbalance. 0 indicates no maximum.
@@ -271,6 +276,11 @@ public:
    * Shutdown the cluster prior to destroying connection pools and other thread local data.
    */
   virtual void shutdown() PURE;
+
+  /**
+   * FIXFIX
+   */
+  virtual const std::string& statPrefix() const PURE;
 
   /**
    * @return ClusterStats& strongly named stats for this cluster.
