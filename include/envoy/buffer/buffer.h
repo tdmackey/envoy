@@ -78,6 +78,11 @@ public:
   virtual void move(Instance& rhs, uint64_t length) PURE;
 
   /**
+   * fixfix
+   */
+  virtual int read(int fd, uint64_t max_length) PURE;
+
+  /**
    * Search for an occurence of a buffer within the larger buffer.
    * @param data supplies the data to search for.
    * @param size supplies the length of the data to search for.
@@ -85,6 +90,11 @@ public:
    * @return the index where the match starts or -1 if there is no match.
    */
   virtual ssize_t search(const void* data, uint64_t size, size_t start) const PURE;
+
+  /**
+   * fixfix
+   */
+  virtual int write(int fd) PURE;
 };
 
 typedef std::unique_ptr<Instance> InstancePtr;

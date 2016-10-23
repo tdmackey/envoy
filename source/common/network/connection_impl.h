@@ -22,9 +22,8 @@ class ConnectionImpl : public virtual Connection,
                        public BufferSource,
                        protected Logger::Loggable<Logger::Id::connection> {
 public:
-  ConnectionImpl(Event::DispatcherImpl& dispatcher);
-  ConnectionImpl(Event::DispatcherImpl& dispatcher, Event::Libevent::BufferEventPtr&& bev,
-                 const std::string& remote_address);
+  // ConnectionImpl(Event::DispatcherImpl& dispatcher);
+  ConnectionImpl(Event::DispatcherImpl& dispatcher, int fd, const std::string& remote_address);
   ~ConnectionImpl();
 
   // Network::Connection
@@ -57,7 +56,7 @@ protected:
   /**
    * Enable or disable each of the 3 socket level callbacks.
    */
-  void enableCallbacks(bool read, bool write, bool event);
+  // void enableCallbacks(bool read, bool write, bool event);
 
   /**
    * Called by libevent when an owned evbuffer changes size.
@@ -95,20 +94,26 @@ protected:
   static const evbuffer_cb_func write_buffer_cb_;
 
   Event::DispatcherImpl& dispatcher_;
-  Event::Libevent::BufferEventPtr bev_;
+  int fd_{-1};
+  Event::FileEventPtr file_event_;
   const std::string remote_address_;
   const uint64_t id_;
   FilterManager filter_manager_;
   std::list<ConnectionCallbacks*> callbacks_;
   Event::TimerPtr redispatch_read_event_;
-  bool read_enabled_;
+  Event::TimerPtr do_write_event_;
+  bool read_enabled_{true};
+  bool connecting_{};
   bool closing_with_flush_{};
 
 private:
   void fakeBufferDrain(ConnectionBufferType type, evbuffer* buffer);
+  void onDoWrite();
+  void onReadReady();
+  void onWriteReady();
 
-  Buffer::WrappedImpl read_buffer_;
-  Buffer::WrappedImpl write_buffer_;
+  Buffer::OwnedImpl read_buffer_;
+  Buffer::OwnedImpl write_buffer_;
   Buffer::Instance* current_write_buffer_{};
 };
 
@@ -117,18 +122,15 @@ private:
  */
 class ClientConnectionImpl : public ConnectionImpl, virtual public ClientConnection {
 public:
-  ClientConnectionImpl(Event::DispatcherImpl& dispatcher, Event::Libevent::BufferEventPtr&& bev,
-                       const std::string& url);
+  ClientConnectionImpl(Event::DispatcherImpl& dispatcher, int fd, const std::string& url);
 
   static Network::ClientConnectionPtr create(Event::DispatcherImpl& dispatcher,
-                                             Event::Libevent::BufferEventPtr&& bev,
                                              const std::string& url);
 };
 
 class TcpClientConnectionImpl : public ClientConnectionImpl {
 public:
-  TcpClientConnectionImpl(Event::DispatcherImpl& dispatcher, Event::Libevent::BufferEventPtr&& bev,
-                          const std::string& url);
+  TcpClientConnectionImpl(Event::DispatcherImpl& dispatcher, const std::string& url);
 
   // Network::ClientConnection
   void connect() override;
@@ -136,8 +138,7 @@ public:
 
 class UdsClientConnectionImpl final : public ClientConnectionImpl {
 public:
-  UdsClientConnectionImpl(Event::DispatcherImpl& dispatcher, Event::Libevent::BufferEventPtr&& bev,
-                          const std::string& url);
+  UdsClientConnectionImpl(Event::DispatcherImpl& dispatcher, const std::string& url);
 
   // Network::ClientConnection
   void connect() override;

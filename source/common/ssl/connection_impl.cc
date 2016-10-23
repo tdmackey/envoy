@@ -10,10 +10,9 @@
 
 namespace Ssl {
 
-ConnectionImpl::ConnectionImpl(Event::DispatcherImpl& dispatcher,
-                               Event::Libevent::BufferEventPtr&& bev,
+ConnectionImpl::ConnectionImpl(Event::DispatcherImpl& dispatcher, int fd,
                                const std::string& remote_address, ContextImpl& ctx)
-    : Network::ConnectionImpl(dispatcher, std::move(bev), remote_address), ctx_(ctx) {}
+    : Network::ConnectionImpl(dispatcher, fd, remote_address), ctx_(ctx) {}
 
 ConnectionImpl::~ConnectionImpl() {
   // Filters may care about whether this connection is an SSL connection or not in their
@@ -22,8 +21,8 @@ ConnectionImpl::~ConnectionImpl() {
   filter_manager_.destroyFilters();
 }
 
-void ConnectionImpl::onEvent(short events) {
-  if (events & BEV_EVENT_ERROR) {
+void ConnectionImpl::onEvent(short) {
+  /*if (events & BEV_EVENT_ERROR) {
     long error;
     do {
       error = bufferevent_get_openssl_error(bev_.get());
@@ -47,11 +46,11 @@ void ConnectionImpl::onEvent(short events) {
     handshake_complete_ = true;
   }
 
-  Network::ConnectionImpl::onEvent(events);
+  Network::ConnectionImpl::onEvent(events);*/
 }
 
 std::string ConnectionImpl::sha256PeerCertificateDigest() {
-  X509Ptr cert = X509Ptr(SSL_get_peer_certificate(bufferevent_openssl_get_ssl(bev_.get())));
+  /*X509Ptr cert = X509Ptr(SSL_get_peer_certificate(bufferevent_openssl_get_ssl(bev_.get())));
   if (!cert) {
     return "";
   }
@@ -60,23 +59,24 @@ std::string ConnectionImpl::sha256PeerCertificateDigest() {
   unsigned int n;
   X509_digest(cert.get(), EVP_sha256(), computed_hash.data(), &n);
   RELEASE_ASSERT(n == computed_hash.size());
-  return Hex::encode(computed_hash);
+  return Hex::encode(computed_hash);*/
+  return "";
 }
 
-ClientConnectionImpl::ClientConnectionImpl(Event::DispatcherImpl& dispatcher,
-                                           Event::Libevent::BufferEventPtr&& bev, ContextImpl& ctx,
+ClientConnectionImpl::ClientConnectionImpl(Event::DispatcherImpl& dispatcher, ContextImpl& ctx,
                                            const std::string& url)
-    : ConnectionImpl(dispatcher, std::move(bev), url, ctx) {}
+    : ConnectionImpl(dispatcher, -1, url, ctx) {}
 
 void ClientConnectionImpl::connect() {
   Network::AddrInfoPtr addr_info =
       Network::Utility::resolveTCP(Network::Utility::hostFromUrl(remote_address_),
                                    Network::Utility::portFromUrl(remote_address_));
-  bufferevent_socket_connect(bev_.get(), addr_info->ai_addr, addr_info->ai_addrlen);
+  ASSERT(
+      false); // bufferevent_socket_connect(bev_.get(), addr_info->ai_addr, addr_info->ai_addrlen);
 }
 
 void ConnectionImpl::closeBev() {
-  if (handshake_complete_) {
+  /*if (handshake_complete_) {
     // SSL_RECEIVED_SHUTDOWN tells SSL_shutdown to act as if we had already received a close notify
     // from the other end.  SSL_shutdown will then send the final close notify in reply.  The other
     // end will receive the close notify and send theirs.  By this time, we will have already closed
@@ -93,14 +93,15 @@ void ConnectionImpl::closeBev() {
     ERR_clear_error();
   }
 
-  Network::ConnectionImpl::closeBev();
+  Network::ConnectionImpl::closeBev();*/
 }
 
 std::string ConnectionImpl::nextProtocol() {
-  const unsigned char* proto;
+  /*const unsigned char* proto;
   unsigned int proto_len;
   SSL_get0_alpn_selected(bufferevent_openssl_get_ssl(bev_.get()), &proto, &proto_len);
-  return std::string(reinterpret_cast<const char*>(proto), proto_len);
+  return std::string(reinterpret_cast<const char*>(proto), proto_len);*/
+  return "";
 }
 
 } // Ssl

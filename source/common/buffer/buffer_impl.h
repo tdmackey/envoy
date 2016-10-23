@@ -7,10 +7,15 @@
 namespace Buffer {
 
 /**
- * Base implementation for libevent backed buffers.
+ * Wraps an allocated and owned evbuffer.
  */
-class ImplBase : public Instance {
+class OwnedImpl : public Instance {
 public:
+  OwnedImpl();
+  OwnedImpl(const std::string& data);
+  OwnedImpl(const Instance& data);
+  OwnedImpl(const void* data, uint64_t size);
+
   // Instance
   void add(const void* data, uint64_t size) override;
   void add(const std::string& data) override;
@@ -21,43 +26,11 @@ public:
   void* linearize(uint32_t size) override;
   void move(Instance& rhs) override;
   void move(Instance& rhs, uint64_t length) override;
+  int read(int fd, uint64_t max_length) override;
   ssize_t search(const void* data, uint64_t size, size_t start) const override;
+  int write(int fd) override;
 
 private:
-  /**
-   * @return evbuffer& the backing evbuffer.
-   */
-  virtual evbuffer& buffer() const PURE;
-};
-
-/**
- * Wraps a non-owned evbuffer.
- */
-class WrappedImpl : public ImplBase {
-public:
-  WrappedImpl(evbuffer* buffer) : buffer_(buffer) {}
-
-private:
-  // ImplBase
-  evbuffer& buffer() const override { return *buffer_; }
-
-  evbuffer* buffer_;
-};
-
-/**
- * Wraps an allocated and owned evbuffer.
- */
-class OwnedImpl : public ImplBase {
-public:
-  OwnedImpl();
-  OwnedImpl(const std::string& data);
-  OwnedImpl(const Instance& data);
-  OwnedImpl(const void* data, uint64_t size);
-
-private:
-  // ImplBase
-  evbuffer& buffer() const override { return *buffer_; }
-
   Event::Libevent::BufferPtr buffer_;
 };
 

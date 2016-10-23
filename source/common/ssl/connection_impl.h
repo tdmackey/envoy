@@ -8,8 +8,8 @@ namespace Ssl {
 
 class ConnectionImpl : public Network::ConnectionImpl, public Connection {
 public:
-  ConnectionImpl(Event::DispatcherImpl& dispatcher, Event::Libevent::BufferEventPtr&& bev,
-                 const std::string& remote_address, ContextImpl& ctx);
+  ConnectionImpl(Event::DispatcherImpl& dispatcher, int fd, const std::string& remote_address,
+                 ContextImpl& ctx);
   ~ConnectionImpl();
 
   // Network::Connection
@@ -30,8 +30,7 @@ private:
 
 class ClientConnectionImpl final : public ConnectionImpl, public Network::ClientConnection {
 public:
-  ClientConnectionImpl(Event::DispatcherImpl& dispatcher, Event::Libevent::BufferEventPtr&& bev,
-                       ContextImpl& ctx, const std::string& url);
+  ClientConnectionImpl(Event::DispatcherImpl& dispatcher, ContextImpl& ctx, const std::string& url);
 
   // Network::ClientConnection
   void connect() override;
