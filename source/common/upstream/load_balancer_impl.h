@@ -27,7 +27,10 @@ protected:
 
 private:
   bool earlyExitNonZoneRouting();
-  bool isGlobalPanic();
+  bool isGlobalPanic(const HostSet& host_set);
+  const std::vector<HostPtr>& tryZoneAwareRouting();
+  std::vector<double>
+  calculateZonePercentage(const std::vector<std::vector<HostPtr>>& hosts_per_zone);
 
   const HostSet& host_set_;
   const HostSet* local_host_set_;
