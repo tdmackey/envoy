@@ -6,6 +6,23 @@ set -e
 
 . "$(dirname "$0")"/build_setup.sh
 echo "building using ${NUM_CPUS} CPUs"
+export COV_DIR=/cov
+export PATH=$PATH:${COV_DIR}/
+
+function bazel_coverity_release_binary_build() {
+  echo "Building..."
+  cd "${ENVOY_CI_DIR}"
+  rm -rf cov-int
+  ls ${COV_DIR}
+  cov-build --dir cov-int bazel --batch build --action_env=LD_PRELOAD ${BAZEL_BUILD_OPTIONS} -c opt //source/exe:envoy-static.stamped
+  # tar up the coverity results
+  tar czvf envoy-coverity-output.tgz cov-int
+  # Copy the coverity results somwherethat we can access outside of the
+  # container.
+  cp -f \
+    "${ENVOY_CI_DIR}"/envoy-coverity-output.tgz \
+    "${ENVOY_DELIVERY_DIR}"/envoy-coverity-output.tgz
+}
 
 function bazel_release_binary_build() {
   echo "Building..."
@@ -40,6 +57,12 @@ elif [[ "$1" == "bazel.release.server_only" ]]; then
   setup_gcc_toolchain
   echo "bazel release build..."
   bazel_release_binary_build
+  exit 0
+elif [[ "$1" == "bazel.cov-build" ]]; then
+  setup_gcc_toolchain
+  setup_coverity_toolchain
+  echo "bazel coverity build"
+  bazel_coverity_release_binary_build
   exit 0
 elif [[ "$1" == "bazel.debug" ]]; then
   setup_gcc_toolchain

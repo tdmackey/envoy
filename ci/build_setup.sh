@@ -9,6 +9,20 @@ export PPROF_PATH=/thirdparty_build/bin/pprof
 NUM_CPUS=`grep -c ^processor /proc/cpuinfo`
 
 export ENVOY_SRCDIR=/source
+export COV_DIR=/cov
+export PATH=$PATH:${COV_DIR}/bin
+
+function setup_coverity_toolchain() {
+  if [[ ! -d "${COV_DIR}" ]]
+  then
+    echo "${COV_DIR} mount missing - did you forget -v <something>:${COV_DIR}?"
+    exit 1
+  fi
+  export PATH=$PATH:${COV_DIR}/bin
+  echo `which cov-build`
+  ls $COV_DIR
+  echo "$COV_DIR toolchain configured"
+}
 
 function setup_gcc_toolchain() {
   export CC=gcc
